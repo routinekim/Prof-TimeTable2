@@ -596,18 +596,17 @@ footer {
 
 /* Logout Button */
 .logout-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    padding: 8px 16px;
+    position: relative;
+    padding: 8px 24px;
     border: 1px solid var(--border-color);
     border-radius: 20px;
     background: #fff;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    z-index: 100;
+    display: block;
+    margin: 0 auto 20px;
 }
 
 .logout-btn:hover {
