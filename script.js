@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordInput = document.getElementById('password');
     const adminControls = document.getElementById('adminControls');
     const excelUpload = document.getElementById('excelUpload');
-    const saveToCloudBtn = document.getElementById('saveToCloudBtn');
+    const saveToCloudBtn = document.getElementById('saveToCloudBtn'); // May be null
     const syncStatus = document.getElementById('syncStatus');
 
     // --- Supabase Config ---
@@ -244,8 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isManual && !confirm('현재 데이터를 클라우드 서버에 저장하시겠습니까?')) return;
 
-        saveToCloudBtn.disabled = true;
-        saveToCloudBtn.textContent = '⏳ 서버 동기화 중...';
+        if (saveToCloudBtn) {
+            saveToCloudBtn.disabled = true;
+            saveToCloudBtn.textContent = '⏳ 서버 동기화 중...';
+        }
         syncStatus.textContent = '상태: 클라우드 업데이트 중...';
 
         try {
@@ -265,12 +267,16 @@ document.addEventListener('DOMContentLoaded', () => {
             syncStatus.textContent = '상태: 저장 실패 ❌';
             alert('저장 오류: ' + error.message);
         } finally {
-            saveToCloudBtn.disabled = false;
-            saveToCloudBtn.textContent = '🔄 클라우드 데이터 서버에 저장';
+            if (saveToCloudBtn) {
+                saveToCloudBtn.disabled = false;
+                saveToCloudBtn.textContent = '🔄 클라우드 데이터 서버에 저장';
+            }
         }
     }
 
-    saveToCloudBtn.addEventListener('click', () => syncToCloud(true));
+    if (saveToCloudBtn) {
+        saveToCloudBtn.addEventListener('click', () => syncToCloud(true));
+    }
 
     function handleSearch(e) {
         if (!isLoggedIn) return;
