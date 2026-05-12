@@ -25,14 +25,19 @@
             </div>
 
             <div class="admin-tools-section" style="margin-top: 20px; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                <h3 style="margin-top:0; font-size: 1rem; color: #1e293b; margin-bottom: 15px;">📊 시간표 데이터 일괄 업데이트</h3>
+                <h3 style="margin-top:0; font-size: 1rem; color: #1e293b; margin-bottom: 15px;">📊 시간표 및 위원회 데이터 관리</h3>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <label for="excelUpload" class="upload-label" style="background: #10b981; color: white; padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: 500; display: block;">
-                        📁 엑셀 파일 선택 및 자동 업데이트
-                        <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display: none;">
-                    </label>
+                    <div style="display: flex; gap: 10px;">
+                        <label for="excelUpload" class="upload-label" style="flex: 1; background: #10b981; color: white; padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: 500; display: block; margin:0;">
+                            📁 엑셀 파일 선택 및 자동 업데이트
+                            <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display: none;">
+                        </label>
+                        <button id="forcePushCommitteesBtn" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 500;">
+                            📤 현재 로컬 위원회 데이터를 서버 저장
+                        </button>
+                    </div>
                     <div id="syncStatus" style="text-align: center; font-size: 0.85rem; color: #0284c7; background: #f0f9ff; padding: 10px; border-radius: 8px; border: 1px solid #bae6fd;">
-                        상태: 준비됨 (엑셀을 올리면 자동으로 서버에 저장됩니다)
+                        상태: 준비됨 (엑셀/위원회 데이터를 서버에 동기화할 수 있습니다)
                     </div>
                 </div>
             </div>
@@ -41,15 +46,6 @@
         <main>
             <div id="committeeList" class="committee-grid">
                 <!-- 위원회 카드가 여기에 생성됩니다 -->
-            </div>
-            
-            <div style="margin-top: 30px; padding: 15px; border-top: 1px solid #e2e8f0; text-align: center;">
-                <button id="forcePushCommitteesBtn" style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">
-                    📤 현재 로컬 위원회 데이터를 서버로 강제 전송
-                </button>
-                <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 8px;">
-                    ※ PC에만 있는 위원회 정보를 스마트폰에서도 보고 싶을 때 한 번만 눌러주세요.
-                </p>
             </div>
         </main>
 
