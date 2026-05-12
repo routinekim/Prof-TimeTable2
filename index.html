@@ -105,7 +105,10 @@
         </div>
     </div>
 
-    <script src="data.js"></script>
+    <script>
+        // Cache busting for data.js
+        document.write('<script src="data.js?v=' + new Date().getTime() + '"><\/script>');
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
