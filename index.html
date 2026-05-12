@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +9,13 @@
     <!-- Google Fonts: Noto Sans KR -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
     <div class="app-container">
         <header>
@@ -20,7 +25,8 @@
                     <img src="hanbi.gif" alt="한비 로고" class="logo">
                 </div>
                 <div class="qr-container">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://prof-time-table.vercel.app/" alt="QR 코드" class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://prof-time-table.vercel.app/"
+                        alt="QR 코드" class="qr-code">
                     <span>Scan for Live URL</span>
                 </div>
             </div>
@@ -40,21 +46,21 @@
                     📊 엑셀 파일로 시간표 업데이트
                     <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display: none;">
                 </label>
-                <a href="committee.html" class="upload-label" style="background: #3b82f6; text-decoration: none; margin-left: 10px;">
+                <a href="committee.html" class="upload-label"
+                    style="background: #3b82f6; text-decoration: none; margin-left: 10px;">
                     👥 위원회 관리
                 </a>
-                <div class="github-sync-wrapper" style="margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px border #e2e8f0;">
-                    <h4 style="margin-top:0; font-size: 0.9rem; color: #475569;">🌐 라이브 사이트 동기화 (GitHub)</h4>
-                    <input type="password" id="githubToken" placeholder="GitHub Personal Access Token 입력" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem;">
-                    <button id="syncToGithubBtn" class="upload-label" style="background: #10b981; border: none; cursor: pointer; width: 100%; margin: 0;">
-                        🚀 깃허브에 반영하여 배포하기
-                    </button>
-                    <button id="resetLocalDataBtn" style="width: 100%; margin-top: 10px; padding: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; color: #64748b; font-size: 0.75rem; cursor: pointer;">
-                        ♻️ 로컬 데이터 초기화 (서버 최신본 가져오기)
-                    </button>
-                    <p style="font-size: 0.7rem; color: #64748b; margin-top: 8px; line-height: 1.4;">
-                        ※ 토큰을 입력하고 버튼을 누르면 깃허브의 data.js가 업데이트되며,<br>약 1분 뒤 스마트폰에서도 최신 정보를 보실 수 있습니다.
+                <div class="supabase-sync-wrapper" style="margin-top: 15px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                    <h4 style="margin-top:0; font-size: 0.9rem; color: #0369a1;">☁️ 실시간 클라우드 동기화 (Supabase)</h4>
+                    <p style="font-size: 0.75rem; color: #0c4a6e; margin-bottom: 10px;">
+                        PC에서 업데이트하면 스마트폰에 즉시 반영됩니다.
                     </p>
+                    <button id="saveToCloudBtn" class="upload-label" style="background: #0ea5e9; border: none; cursor: pointer; width: 100%; margin: 0;">
+                        🔄 클라우드 데이터 서버에 저장
+                    </button>
+                    <div id="syncStatus" style="font-size: 0.7rem; color: #0284c7; margin-top: 8px; font-weight: 500;">
+                        상태: 준비됨
+                    </div>
                 </div>
             </div>
             <button id="logoutBtn" class="logout-btn" style="display: none;">로그아웃</button>
@@ -114,4 +120,5 @@
     </script>
     <script src="script.js"></script>
 </body>
+
 </html>

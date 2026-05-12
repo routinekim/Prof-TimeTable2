@@ -9,25 +9,63 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordInput = document.getElementById('password');
     const adminControls = document.getElementById('adminControls');
     const excelUpload = document.getElementById('excelUpload');
+    const saveToCloudBtn = document.getElementById('saveToCloudBtn');
+    const syncStatus = document.getElementById('syncStatus');
+
+    // --- Supabase Config ---
+    const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; // 사용자님의 프로젝트 URL로 변경 필요
+    const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP'; // 사용자님의 anon key로 변경 필요
+
+    let supabase = null;
+    if (SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT_URL')) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } else {
+        console.warn("Supabase 설정이 완료되지 않았습니다. 기본 데이터를 사용합니다.");
+    }
 
     // Auth state management
     let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
 
-    // Use a flexible variable for data (const in data.js cannot be reassigned)
+    // Use a flexible variable for data
     let currentTimetableData = window.timetableData || [];
 
-    // Load persistent data if exists
-    const savedData = localStorage.getItem('customTimetableData');
-    if (savedData) {
-        try {
-            const parsed = JSON.parse(savedData);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                currentTimetableData = parsed;
-                console.log("Using locally saved data");
+    // --- Data Loading Logic ---
+    async function loadInitialData() {
+        // 1. Try Cloud (Supabase) first
+        if (supabase) {
+            try {
+                const { data, error } = await supabase
+                    .from('timetable_data')
+                    .select('content')
+                    .eq('id', 'latest')
+                    .single();
+
+                if (data && data.content) {
+                    currentTimetableData = data.content;
+                    console.log("Cloud data loaded successfully");
+                    renderTimetable();
+                    return;
+                }
+            } catch (e) {
+                console.log("Cloud fetch failed or table not ready, trying local...");
             }
-        } catch(e) {
-            console.error("Saved data parse error", e);
         }
+
+        // 2. Fallback to LocalStorage
+        const savedData = localStorage.getItem('customTimetableData');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    currentTimetableData = parsed;
+                    console.log("Local storage data loaded");
+                }
+            } catch (e) {
+                console.error("Local storage parse error", e);
+            }
+        }
+
+        renderTimetable();
     }
 
     function updateAuthState() {
@@ -41,8 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
             logoutBtn.style.display = 'none';
             adminControls.style.display = 'none';
             searchInput.disabled = true;
-            searchInput.value = ''; // Clear search on logout
-            renderTimetable(''); // Reset timetable
+            searchInput.value = '';
+            renderTimetable('');
         }
     }
 
@@ -71,16 +109,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateAuthState();
     });
 
-    // Days to iterate through
     const days = ['월', '화', '수', '목', '금'];
 
-    // Generate a deterministic color based on the instructor's name
     function getColor(name) {
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
             hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
-        // Use the hash to get a HUE value (0-360)
         const h = Math.abs(hash) % 360;
         return {
             bg: `hsl(${h}, 70%, 90%)`,
@@ -88,41 +123,33 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Initial render
     function renderTimetable(searchQuery = '', forceShow = false) {
         timetableBody.innerHTML = '';
         const trimmedQuery = searchQuery.trim();
-        
-        // Split query by comma or whitespace, filter out empty strings
         const queries = trimmedQuery.toLowerCase().split(/[,\s]+/).filter(q => q.length > 0);
 
         currentTimetableData.forEach(row => {
             const tr = document.createElement('tr');
-            
-            // Period Cell
             const periodTd = document.createElement('td');
             periodTd.className = 'period-cell';
-            
-            // Clean up repeated period text (e.g., "0교시(08:00),0교시(08:00)...")
+
             let periodRaw = (row.period || "").toString().trim();
             if (periodRaw.includes(',')) {
                 const parts = periodRaw.split(',').map(s => s.trim()).filter(s => s);
-                periodRaw = parts[parts.length - 1]; // Take the last one as requested
+                periodRaw = parts[parts.length - 1];
             }
 
-            // Extract "X교시" and "(Time)" from "X교시(Time)"
             const match = periodRaw.match(/(.*)(\(.*\))/);
             let pNum = periodRaw;
             let pTime = "";
             if (match) {
-                pNum = match[1].trim(); // e.g. "0교시"
-                pTime = match[2].trim(); // e.g. "(08:00)"
+                pNum = match[1].trim();
+                pTime = match[2].trim();
             }
-            
+
             periodTd.innerHTML = `<div class="p-num">${pNum}</div><div class="p-time">${pTime}</div>`;
             tr.appendChild(periodTd);
 
-            // Add classes for row styling
             const grayPeriods = ['0교시', '2교시', '6교시', '8교시', '10교시', '12교시', '14교시'];
             if (grayPeriods.includes(pNum)) {
                 tr.classList.add('gray-row');
@@ -130,48 +157,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.classList.add('lunch-row');
             }
 
-            // Day Cells
             days.forEach(day => {
                 const td = document.createElement('td');
                 const names = row.days[day] || [];
-                
-                // Only process names if there is a search query OR forceShow is true
+
                 if (isLoggedIn && (queries.length > 0 || forceShow)) {
-                    // Create a wrapper for grid layout
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'cell-content';
 
                     names.forEach(name => {
                         const nameLower = name.toLowerCase();
-                        // If forceShow is true, show everyone, otherwise filter by query
                         const isMatch = forceShow || queries.some(q => nameLower.includes(q));
-                        
+
                         if (isMatch) {
                             const span = document.createElement('span');
                             span.className = 'name-tag active';
                             span.textContent = name;
-                            
-                            // Apply custom colors
                             const colors = getColor(name);
                             span.style.backgroundColor = colors.bg;
                             span.style.color = colors.text;
                             span.style.borderColor = colors.text.replace('25%', '60%');
-                            
                             contentDiv.appendChild(span);
                         }
                     });
-                    
                     td.appendChild(contentDiv);
                 }
-                
                 tr.appendChild(td);
             });
-
             timetableBody.appendChild(tr);
         });
     }
 
-    // Excel Upload Handler
     excelUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -183,17 +199,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Convert sheet to JSON
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                
-                // Parse the Excel structure to our format
-                // Assuming Header: [시간, 월, 화, 수, 목, 금, 토, 일]
+
                 const newTimetable = [];
                 for (let i = 1; i < jsonData.length; i++) {
                     const row = jsonData[i];
                     if (!row || row.length === 0 || !row[0]) continue;
-
                     newTimetable.push({
                         period: row[0].toString(),
                         days: {
@@ -211,125 +222,69 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (newTimetable.length > 0) {
                     currentTimetableData = newTimetable;
                     localStorage.setItem('customTimetableData', JSON.stringify(newTimetable));
-                    alert(`성공: ${newTimetable.length}개의 시간표 데이터를 업데이트했습니다!`);
-                    // Show the updated result immediately
-                    renderTimetable('', true); 
-                } else {
-                    alert('엑셀 파일에서 유효한 데이터를 찾을 수 없습니다. 형식을 확인해주세요.');
+                    alert(`성공: ${newTimetable.length}개의 데이터를 불러왔습니다. 클라우드에 저장하려면 아래 버튼을 눌러주세요.`);
+                    renderTimetable('', true);
                 }
             } catch (error) {
                 console.error(error);
-                alert('파일 처리 중 오류가 발생했습니다: ' + error.message);
+                alert('파일 처리 중 오류 발생');
             }
         };
         reader.readAsArrayBuffer(file);
     });
 
-    // Event Listener for Search
+    // --- Supabase Cloud Sync Logic ---
+    saveToCloudBtn.addEventListener('click', async () => {
+        if (!supabase) {
+            alert('Supabase 설정(URL/Key)이 완료되지 않았습니다. 코드를 확인해주세요.');
+            return;
+        }
+
+        if (!confirm('현재 데이터를 클라우드 서버에 저장하시겠습니까?\n모든 기기에 즉시 반영됩니다.')) return;
+
+        saveToCloudBtn.disabled = true;
+        saveToCloudBtn.textContent = '⏳ 서버 저장 중...';
+        syncStatus.textContent = '상태: 업로드 중...';
+
+        try {
+            const { error } = await supabase
+                .from('timetable_data')
+                .upsert({
+                    id: 'latest',
+                    content: currentTimetableData,
+                    updated_at: new Date()
+                });
+
+            if (error) throw error;
+            syncStatus.textContent = '상태: 동기화 완료! ✅';
+            alert('🚀 클라우드 저장 성공! 이제 모든 기기에서 최신 정보를 볼 수 있습니다.');
+        } catch (error) {
+            console.error(error);
+            syncStatus.textContent = '상태: 저장 실패 ❌';
+            alert('저장 오류: ' + error.message);
+        } finally {
+            saveToCloudBtn.disabled = false;
+            saveToCloudBtn.textContent = '🔄 클라우드 데이터 서버에 저장';
+        }
+    });
+
     function handleSearch(e) {
         if (!isLoggedIn) return;
         renderTimetable(e.target.value);
     }
-
     searchInput.addEventListener('input', handleSearch);
-    searchInput.addEventListener('compositionend', handleSearch); // Support for mobile Korean input
+    searchInput.addEventListener('compositionend', handleSearch);
 
-    // Initialize Auth state
+    // Initial load
     updateAuthState();
+    loadInitialData();
 
-    // GitHub Sync Logic
-    const syncToGithubBtn = document.getElementById('syncToGithubBtn');
-    const githubTokenInput = document.getElementById('githubToken');
-
-    // Load saved token if exists
-    const savedToken = localStorage.getItem('githubToken');
-    if (savedToken) githubTokenInput.value = savedToken;
-
-    syncToGithubBtn.addEventListener('click', async () => {
-        const token = githubTokenInput.value.trim();
-        if (!token) {
-            alert('GitHub Personal Access Token을 입력해주세요.');
-            return;
-        }
-
-        // Save token for convenience
-        localStorage.setItem('githubToken', token);
-
-        if (!confirm('현재 업로드된 데이터를 라이브 사이트에 반영하시겠습니까?\n반영 후 약 1분 뒤에 모든 기기에 적용됩니다.')) return;
-
-        syncToGithubBtn.disabled = true;
-        syncToGithubBtn.textContent = '⏳ 동기화 중...';
-
-        const OWNER = 'routinekim';
-        const REPO = 'Prof-TimeTable2';
-        const FILE_PATH = 'data.js';
-
-        try {
-            // 1. Get the current file's SHA (needed for updating)
-            const getUrl = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
-            const getRes = await fetch(getUrl, {
-                headers: { 'Authorization': `token ${token}` }
-            });
-
-            if (!getRes.ok) throw new Error('파일 정보를 가져오지 못했습니다. 토큰이나 권한을 확인하세요.');
-            const fileData = await getRes.json();
-            const sha = fileData.sha;
-
-            // 2. Prepare the new content
-            const content = `const timetableData = ${JSON.stringify(currentTimetableData, null, 2)};`;
-            
-            // Handle Korean characters for base64 encoding
-            const base64Content = btoa(unescape(encodeURIComponent(content)));
-
-            // 3. Update the file
-            const putRes = await fetch(getUrl, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: 'Update timetable data from web admin',
-                    content: base64Content,
-                    sha: sha
-                })
-            });
-
-            if (putRes.ok) {
-                alert('🚀 성공! 깃허브에 데이터가 반영되었습니다.\n잠시 후(약 1분) 사이트가 자동으로 재배포됩니다.');
-            } else {
-                const error = await putRes.json();
-                throw new Error(error.message || '업데이트에 실패했습니다.');
-            }
-        } catch (error) {
-            console.error(error);
-            alert('오류 발생: ' + error.message);
-        } finally {
-            syncToGithubBtn.disabled = false;
-            syncToGithubBtn.textContent = '🚀 깃허브에 반영하여 배포하기';
-        }
-    });
-
-    // Reset Local Data Logic
-    const resetLocalDataBtn = document.getElementById('resetLocalDataBtn');
-    resetLocalDataBtn.addEventListener('click', () => {
-        if (confirm('스마트폰(또는 현재 기기)에 저장된 임시 데이터를 삭제하고,\n서버(깃허브)에 있는 최신 데이터를 다시 불러오시겠습니까?')) {
-            localStorage.removeItem('customTimetableData');
-            location.reload(); // Refresh to load data.js afresh
-        }
-    });
-    
-    // Committee Dropdown logic
+    // Committee logic
     const committeeSelect = document.getElementById('committeeSelect');
-    
     function loadCommittees() {
         const committees = JSON.parse(localStorage.getItem('committees') || '[]');
-        
-        // Sort alphabetically (가나다순)
         committees.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-
         committeeSelect.innerHTML = '<option value="">-- 위원회 선택 (전체보기) --</option>';
-        
         committees.forEach(c => {
             const option = document.createElement('option');
             option.value = c.members;
@@ -337,16 +292,10 @@ document.addEventListener('DOMContentLoaded', () => {
             committeeSelect.appendChild(option);
         });
     }
-
     committeeSelect.addEventListener('change', (e) => {
-        const members = e.target.value;
-        const searchString = members.replace(/[/,]/g, ' ');
+        const searchString = e.target.value.replace(/[/,]/g, ' ');
         searchInput.value = searchString;
         renderTimetable(searchString);
     });
-
     loadCommittees();
-    
-    // Initial render with empty search
-    renderTimetable();
 });
