@@ -42,19 +42,10 @@
             </div>
             <p class="search-info">※ 한 칸 띄고 이름을 계속 입력하면,<br>여러 교수님이 검색됩니다.</p>
             <div id="adminControls" style="display: none; margin-top: 15px;">
-                <label for="excelUpload" class="upload-label">
-                    📊 엑셀 파일로 시간표 업데이트
-                    <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display: none;">
-                </label>
                 <a href="committee.html" class="upload-label"
-                    style="background: #3b82f6; text-decoration: none; margin-left: 10px;">
-                    👥 위원회 관리
+                    style="background: #3b82f6; text-decoration: none; margin-left: 0px; width: 100%; display: block; text-align: center;">
+                    ⚙️ 관리자 설정 (시간표 및 위원회)
                 </a>
-                <div class="supabase-sync-wrapper" style="margin-top: 15px; padding: 10px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd; text-align: center;">
-                    <div id="syncStatus" style="font-size: 0.8rem; color: #0284c7; font-weight: 500;">
-                        상태: 준비됨
-                    </div>
-                </div>
             </div>
             <button id="logoutBtn" class="logout-btn" style="display: none;">로그아웃</button>
         </header>

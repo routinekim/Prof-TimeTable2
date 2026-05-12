@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="committee.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="app-container">
@@ -20,6 +22,19 @@
             <div class="add-committee-wrapper">
                 <input type="text" id="committeeNameInput" placeholder="새 위원회 이름을 입력하세요" autocomplete="off">
                 <button id="addCommitteeBtn">위원회 추가</button>
+            </div>
+
+            <div class="admin-tools-section" style="margin-top: 20px; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <h3 style="margin-top:0; font-size: 1rem; color: #1e293b; margin-bottom: 15px;">📊 시간표 데이터 일괄 업데이트</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <label for="excelUpload" class="upload-label" style="background: #10b981; color: white; padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: 500; display: block;">
+                        📁 엑셀 파일 선택 및 자동 업데이트
+                        <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display: none;">
+                    </label>
+                    <div id="syncStatus" style="text-align: center; font-size: 0.85rem; color: #0284c7; background: #f0f9ff; padding: 10px; border-radius: 8px; border: 1px solid #bae6fd;">
+                        상태: 준비됨 (엑셀을 올리면 자동으로 서버에 저장됩니다)
+                    </div>
+                </div>
             </div>
         </header>
 

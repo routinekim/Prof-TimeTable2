@@ -8,30 +8,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const adminControls = document.getElementById('adminControls');
-    const excelUpload = document.getElementById('excelUpload');
-    const saveToCloudBtn = document.getElementById('saveToCloudBtn'); // May be null
-    const syncStatus = document.getElementById('syncStatus');
 
     // --- Supabase Config ---
-    const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; // 사용자님의 프로젝트 URL로 변경 필요
-    const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP'; // 사용자님의 anon key로 변경 필요
-
+    const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP'; 
+    
     let supabase = null;
     if (SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT_URL')) {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } else {
-        console.warn("Supabase 설정이 완료되지 않았습니다. 기본 데이터를 사용합니다.");
     }
 
     // Auth state management
     let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-
-    // Use a flexible variable for data
     let currentTimetableData = window.timetableData || [];
 
-    // --- Data Loading Logic ---
     async function loadInitialData() {
-        // 1. Try Cloud (Supabase) first
         if (supabase) {
             try {
                 const { data, error } = await supabase
@@ -39,32 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     .select('content')
                     .eq('id', 'latest')
                     .single();
-
+                
                 if (data && data.content) {
                     currentTimetableData = data.content;
-                    console.log("Cloud data loaded successfully");
                     renderTimetable();
                     return;
                 }
             } catch (e) {
-                console.log("Cloud fetch failed or table not ready, trying local...");
+                console.log("Using local data...");
             }
         }
-
-        // 2. Fallback to LocalStorage
-        const savedData = localStorage.getItem('customTimetableData');
-        if (savedData) {
-            try {
-                const parsed = JSON.parse(savedData);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    currentTimetableData = parsed;
-                    console.log("Local storage data loaded");
-                }
-            } catch (e) {
-                console.error("Local storage parse error", e);
-            }
-        }
-
         renderTimetable();
     }
 
@@ -79,30 +54,24 @@ document.addEventListener('DOMContentLoaded', () => {
             logoutBtn.style.display = 'none';
             adminControls.style.display = 'none';
             searchInput.disabled = true;
-            searchInput.value = '';
-            renderTimetable('');
+            searchInput.value = ''; 
+            renderTimetable(''); 
         }
     }
 
-    // Login Handle
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const username = usernameInput.value;
-        const password = passwordInput.value;
-
-        if (username === 'admin' && password === '1234') {
+        if (usernameInput.value === 'admin' && passwordInput.value === '1234') {
             isLoggedIn = true;
             localStorage.setItem('isLoggedIn', 'true');
             updateAuthState();
-            loginError.textContent = '';
             usernameInput.value = '';
             passwordInput.value = '';
         } else {
-            loginError.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
+            loginError.textContent = '아이디 또는 비밀번호 오류';
         }
     });
 
-    // Logout Handle
     logoutBtn.addEventListener('click', () => {
         isLoggedIn = false;
         localStorage.removeItem('isLoggedIn');
@@ -113,14 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getColor(name) {
         let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
         const h = Math.abs(hash) % 360;
-        return {
-            bg: `hsl(${h}, 70%, 90%)`,
-            text: `hsl(${h}, 70%, 25%)`
-        };
+        return { bg: `hsl(${h}, 70%, 90%)`, text: `hsl(${h}, 70%, 25%)` };
     }
 
     function renderTimetable(searchQuery = '', forceShow = false) {
@@ -151,24 +115,17 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.appendChild(periodTd);
 
             const grayPeriods = ['0교시', '2교시', '6교시', '8교시', '10교시', '12교시', '14교시'];
-            if (grayPeriods.includes(pNum)) {
-                tr.classList.add('gray-row');
-            } else if (pNum === '4교시') {
-                tr.classList.add('lunch-row');
-            }
+            if (grayPeriods.includes(pNum)) tr.classList.add('gray-row');
+            else if (pNum === '4교시') tr.classList.add('lunch-row');
 
             days.forEach(day => {
                 const td = document.createElement('td');
                 const names = row.days[day] || [];
-
                 if (isLoggedIn && (queries.length > 0 || forceShow)) {
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'cell-content';
-
                     names.forEach(name => {
-                        const nameLower = name.toLowerCase();
-                        const isMatch = forceShow || queries.some(q => nameLower.includes(q));
-
+                        const isMatch = forceShow || queries.some(q => name.toLowerCase().includes(q));
                         if (isMatch) {
                             const span = document.createElement('span');
                             span.className = 'name-tag active';
@@ -188,108 +145,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    excelUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-                const newTimetable = [];
-                for (let i = 1; i < jsonData.length; i++) {
-                    const row = jsonData[i];
-                    if (!row || row.length === 0 || !row[0]) continue;
-                    newTimetable.push({
-                        period: row[0].toString(),
-                        days: {
-                            "월": (row[1] || "").toString().split(/[\/,]+/).map(n => n.trim()).filter(n => n),
-                            "화": (row[2] || "").toString().split(/[\/,]+/).map(n => n.trim()).filter(n => n),
-                            "수": (row[3] || "").toString().split(/[\/,]+/).map(n => n.trim()).filter(n => n),
-                            "목": (row[4] || "").toString().split(/[\/,]+/).map(n => n.trim()).filter(n => n),
-                            "금": (row[5] || "").toString().split(/[\/,]+/).map(n => n.trim()).filter(n => n),
-                            "토": (row[6] || "").toString().split(/[\/,]+/).map(n => n.trim()).filter(n => n),
-                            "일": (row[7] || "").toString().split(/[\/,]+/).map(n => n.trim()).filter(n => n)
-                        }
-                    });
-                }
-
-                if (newTimetable.length > 0) {
-                    currentTimetableData = newTimetable;
-                    localStorage.setItem('customTimetableData', JSON.stringify(newTimetable));
-                    
-                    // --- AUTOMATIC SYNC ---
-                    renderTimetable('', true); // Show preview
-                    syncToCloud(); // Sync to Supabase automatically
-                }
-            } catch (error) {
-                console.error(error);
-                alert('파일 처리 중 오류 발생');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    });
-
-    // --- Supabase Cloud Sync Logic ---
-    async function syncToCloud(isManual = false) {
-        if (!supabase) {
-            if (isManual) alert('Supabase 설정(URL/Key)이 완료되지 않았습니다.');
-            return;
-        }
-
-        if (isManual && !confirm('현재 데이터를 클라우드 서버에 저장하시겠습니까?')) return;
-
-        if (saveToCloudBtn) {
-            saveToCloudBtn.disabled = true;
-            saveToCloudBtn.textContent = '⏳ 서버 동기화 중...';
-        }
-        syncStatus.textContent = '상태: 클라우드 업데이트 중...';
-
-        try {
-            const { error } = await supabase
-                .from('timetable_data')
-                .upsert({ 
-                    id: 'latest', 
-                    content: currentTimetableData,
-                    updated_at: new Date() 
-                });
-
-            if (error) throw error;
-            syncStatus.textContent = '상태: 동기화 완료! ✅ (방금)';
-            if (isManual) alert('🚀 클라우드 저장 성공!');
-        } catch (error) {
-            console.error(error);
-            syncStatus.textContent = '상태: 저장 실패 ❌';
-            alert('저장 오류: ' + error.message);
-        } finally {
-            if (saveToCloudBtn) {
-                saveToCloudBtn.disabled = false;
-                saveToCloudBtn.textContent = '🔄 클라우드 데이터 서버에 저장';
-            }
-        }
-    }
-
-    if (saveToCloudBtn) {
-        saveToCloudBtn.addEventListener('click', () => syncToCloud(true));
-    }
-
-    function handleSearch(e) {
-        if (!isLoggedIn) return;
-        renderTimetable(e.target.value);
-    }
+    function handleSearch(e) { if (isLoggedIn) renderTimetable(e.target.value); }
     searchInput.addEventListener('input', handleSearch);
     searchInput.addEventListener('compositionend', handleSearch);
 
-    // Initial load
     updateAuthState();
     loadInitialData();
 
-    // Committee logic
     const committeeSelect = document.getElementById('committeeSelect');
     function loadCommittees() {
         const committees = JSON.parse(localStorage.getItem('committees') || '[]');
