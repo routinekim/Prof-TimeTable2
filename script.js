@@ -222,8 +222,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (newTimetable.length > 0) {
                     currentTimetableData = newTimetable;
                     localStorage.setItem('customTimetableData', JSON.stringify(newTimetable));
-                    alert(`성공: ${newTimetable.length}개의 데이터를 불러왔습니다. 클라우드에 저장하려면 아래 버튼을 눌러주세요.`);
-                    renderTimetable('', true);
+                    
+                    // --- AUTOMATIC SYNC ---
+                    renderTimetable('', true); // Show preview
+                    syncToCloud(); // Sync to Supabase automatically
                 }
             } catch (error) {
                 console.error(error);
@@ -234,30 +236,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Supabase Cloud Sync Logic ---
-    saveToCloudBtn.addEventListener('click', async () => {
+    async function syncToCloud(isManual = false) {
         if (!supabase) {
-            alert('Supabase 설정(URL/Key)이 완료되지 않았습니다. 코드를 확인해주세요.');
+            if (isManual) alert('Supabase 설정(URL/Key)이 완료되지 않았습니다.');
             return;
         }
 
-        if (!confirm('현재 데이터를 클라우드 서버에 저장하시겠습니까?\n모든 기기에 즉시 반영됩니다.')) return;
+        if (isManual && !confirm('현재 데이터를 클라우드 서버에 저장하시겠습니까?')) return;
 
         saveToCloudBtn.disabled = true;
-        saveToCloudBtn.textContent = '⏳ 서버 저장 중...';
-        syncStatus.textContent = '상태: 업로드 중...';
+        saveToCloudBtn.textContent = '⏳ 서버 동기화 중...';
+        syncStatus.textContent = '상태: 클라우드 업데이트 중...';
 
         try {
             const { error } = await supabase
                 .from('timetable_data')
-                .upsert({
-                    id: 'latest',
+                .upsert({ 
+                    id: 'latest', 
                     content: currentTimetableData,
-                    updated_at: new Date()
+                    updated_at: new Date() 
                 });
 
             if (error) throw error;
-            syncStatus.textContent = '상태: 동기화 완료! ✅';
-            alert('🚀 클라우드 저장 성공! 이제 모든 기기에서 최신 정보를 볼 수 있습니다.');
+            syncStatus.textContent = '상태: 동기화 완료! ✅ (방금)';
+            if (isManual) alert('🚀 클라우드 저장 성공!');
         } catch (error) {
             console.error(error);
             syncStatus.textContent = '상태: 저장 실패 ❌';
@@ -266,7 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToCloudBtn.disabled = false;
             saveToCloudBtn.textContent = '🔄 클라우드 데이터 서버에 저장';
         }
-    });
+    }
+
+    saveToCloudBtn.addEventListener('click', () => syncToCloud(true));
 
     function handleSearch(e) {
         if (!isLoggedIn) return;
