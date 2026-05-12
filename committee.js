@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const excelUpload = document.getElementById('excelUpload');
     const syncStatus = document.getElementById('syncStatus');
 
-    // --- Supabase Config (Copied from script.js) ---
+    // --- Supabase Config ---
     const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP'; 
     
@@ -14,11 +14,70 @@ document.addEventListener('DOMContentLoaded', () => {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     }
 
-    // Load data from localStorage
+    // Load data from localStorage initially
     let committees = JSON.parse(localStorage.getItem('committees') || '[]');
 
-    function save() {
+    async function loadAllData() {
+        if (!supabase) {
+            render();
+            return;
+        }
+
+        syncStatus.textContent = '상태: 클라우드 데이터 불러오는 중...';
+        
+        try {
+            // 1. Load Committees
+            const { data: cData } = await supabase
+                .from('timetable_data')
+                .select('content')
+                .eq('id', 'committees')
+                .single();
+            
+            if (cData && cData.content) {
+                committees = cData.content;
+                localStorage.setItem('committees', JSON.stringify(committees));
+                console.log("Committees loaded from cloud");
+            }
+
+            // 2. Load Timetable (for internal reference if needed)
+            const { data: tData } = await supabase
+                .from('timetable_data')
+                .select('content')
+                .eq('id', 'latest')
+                .single();
+            
+            if (tData && tData.content) {
+                localStorage.setItem('customTimetableData', JSON.stringify(tData.content));
+            }
+
+            syncStatus.textContent = '상태: 모든 데이터 동기화 완료 ✅';
+        } catch (e) {
+            console.log("Cloud load failed, using local data");
+            syncStatus.textContent = '상태: 로컬 데이터 사용 중';
+        }
+        
+        render();
+    }
+
+    async function saveCommitteesToCloud() {
+        if (!supabase) return;
+        
         localStorage.setItem('committees', JSON.stringify(committees));
+        syncStatus.textContent = '상태: 위원회 데이터 저장 중... ⏳';
+
+        try {
+            await supabase
+                .from('timetable_data')
+                .upsert({ 
+                    id: 'committees', 
+                    content: committees,
+                    updated_at: new Date() 
+                });
+            syncStatus.textContent = '상태: 위원회 동기화 완료! ✅';
+        } catch (e) {
+            console.error("Committee sync failed", e);
+            syncStatus.textContent = '상태: 위원회 저장 실패 ❌';
+        }
     }
 
     function render() {
@@ -49,13 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Add new committee
-    addBtn.addEventListener('click', () => {
+    addBtn.addEventListener('click', async () => {
         const name = nameInput.value.trim();
         if (name) {
             committees.push({ name, members: '' });
             nameInput.value = '';
-            save();
             render();
+            await saveCommitteesToCloud();
         }
     });
 
@@ -63,28 +122,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') addBtn.click();
     });
 
-    window.deleteCommittee = (index) => {
+    window.deleteCommittee = async (index) => {
         if (confirm('이 위원회를 삭제하시겠습니까?')) {
             committees.splice(index, 1);
-            save();
             render();
+            await saveCommitteesToCloud();
         }
     };
 
+    let debounceTimer;
     window.updateMembers = (index, value) => {
         committees[index].members = value;
-        save();
+        
+        // Update UI immediately
         const tagsContainer = document.getElementById(`tags-${index}`);
         if (tagsContainer) {
             const members = value.split(/[\/, ]+/).filter(m => m.trim());
             const tagsHtml = members.map(m => `<span class="member-tag">${m}</span>`).join('');
             tagsContainer.innerHTML = tagsHtml || '<span style="color:#94a3b8; font-size:0.8rem;">멤버를 추가해주세요</span>';
         }
+
+        // Debounce cloud save to avoid too many requests while typing
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            saveCommitteesToCloud();
+        }, 1000);
     };
 
     // --- Excel Upload & Supabase Sync Logic ---
-    let currentTimetableData = [];
-
     excelUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -114,8 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (newTimetable.length > 0) {
-                    currentTimetableData = newTimetable;
-                    syncToCloud();
+                    syncTimetableToCloud(newTimetable);
                 }
             } catch (error) {
                 console.error(error);
@@ -125,35 +189,28 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsArrayBuffer(file);
     });
 
-    async function syncToCloud() {
-        if (!supabase) {
-            alert('Supabase 설정이 완료되지 않았습니다.');
-            return;
-        }
-
-        syncStatus.textContent = '상태: 클라우드 업데이트 중... ⏳';
-        syncStatus.style.color = '#0284c7';
+    async function syncTimetableToCloud(data) {
+        if (!supabase) return;
+        syncStatus.textContent = '상태: 시간표 데이터 업데이트 중... ⏳';
 
         try {
             const { error } = await supabase
                 .from('timetable_data')
                 .upsert({ 
                     id: 'latest', 
-                    content: currentTimetableData,
+                    content: data,
                     updated_at: new Date() 
                 });
 
             if (error) throw error;
-            syncStatus.textContent = '상태: 시간표 동기화 완료! ✅ (방금)';
-            syncStatus.style.color = '#059669';
-            alert('🚀 시간표 데이터가 성공적으로 업데이트되었습니다!');
+            syncStatus.textContent = '상태: 시간표 동기화 완료! ✅';
+            alert('🚀 시간표 데이터가 클라우드에 성공적으로 저장되었습니다!');
         } catch (error) {
             console.error(error);
-            syncStatus.textContent = '상태: 동기화 실패 ❌';
-            syncStatus.style.color = '#dc2626';
+            syncStatus.textContent = '상태: 시간표 저장 실패 ❌';
             alert('저장 오류: ' + error.message);
         }
     }
 
-    render();
+    loadAllData();
 });

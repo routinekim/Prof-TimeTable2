@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const adminControls = document.getElementById('adminControls');
+    const committeeSelect = document.getElementById('committeeSelect');
 
     // --- Supabase Config ---
     const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
@@ -21,26 +22,52 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth state management
     let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     let currentTimetableData = window.timetableData || [];
+    let committees = [];
 
     async function loadInitialData() {
         if (supabase) {
             try {
-                const { data, error } = await supabase
+                // 1. Load Timetable
+                const { data: tData } = await supabase
                     .from('timetable_data')
                     .select('content')
                     .eq('id', 'latest')
                     .single();
                 
-                if (data && data.content) {
-                    currentTimetableData = data.content;
-                    renderTimetable();
-                    return;
+                if (tData && tData.content) {
+                    currentTimetableData = tData.content;
+                }
+
+                // 2. Load Committees
+                const { data: cData } = await supabase
+                    .from('timetable_data')
+                    .select('content')
+                    .eq('id', 'committees')
+                    .single();
+                
+                if (cData && cData.content) {
+                    committees = cData.content;
+                    localStorage.setItem('committees', JSON.stringify(committees));
+                    renderCommittees();
                 }
             } catch (e) {
-                console.log("Using local data...");
+                console.log("Using local fallback...");
+                committees = JSON.parse(localStorage.getItem('committees') || '[]');
+                renderCommittees();
             }
         }
         renderTimetable();
+    }
+
+    function renderCommittees() {
+        committees.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        committeeSelect.innerHTML = '<option value="">-- 위원회 선택 (전체보기) --</option>';
+        committees.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.members;
+            option.textContent = c.name;
+            committeeSelect.appendChild(option);
+        });
     }
 
     function updateAuthState() {
@@ -149,25 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', handleSearch);
     searchInput.addEventListener('compositionend', handleSearch);
 
-    updateAuthState();
-    loadInitialData();
-
-    const committeeSelect = document.getElementById('committeeSelect');
-    function loadCommittees() {
-        const committees = JSON.parse(localStorage.getItem('committees') || '[]');
-        committees.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-        committeeSelect.innerHTML = '<option value="">-- 위원회 선택 (전체보기) --</option>';
-        committees.forEach(c => {
-            const option = document.createElement('option');
-            option.value = c.members;
-            option.textContent = c.name;
-            committeeSelect.appendChild(option);
-        });
-    }
     committeeSelect.addEventListener('change', (e) => {
         const searchString = e.target.value.replace(/[/,]/g, ' ');
         searchInput.value = searchString;
         renderTimetable(searchString);
     });
-    loadCommittees();
+
+    updateAuthState();
+    loadInitialData();
 });
