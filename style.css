@@ -135,8 +135,31 @@ h1 {
 
 .search-wrapper {
     position: relative;
-    max-width: 500px;
-    margin: 0 auto;
+    max-width: 600px;
+    margin: 0 auto 10px;
+}
+
+.committee-select-wrapper {
+    max-width: 600px;
+    margin: 0 auto 15px;
+}
+
+#committeeSelect {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    background-color: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+#committeeSelect:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 #nameSearch {
@@ -533,4 +556,29 @@ footer {
         padding: 30px 20px;
         margin: 15px;
     }
+}
+
+/* Excel Upload Button */
+.upload-label {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #217346; /* Excel Green */
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+}
+
+.upload-label:hover {
+    background: #1a5c38;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.upload-label:active {
+    transform: translateY(0);
 }
