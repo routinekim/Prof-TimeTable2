@@ -222,11 +222,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Event Listener for Search
-    searchInput.addEventListener('input', (e) => {
-        if (!isLoggedIn) return; // Guard clause
-        const value = e.target.value;
-        renderTimetable(value);
-    });
+    function handleSearch(e) {
+        if (!isLoggedIn) return;
+        renderTimetable(e.target.value);
+    }
+
+    searchInput.addEventListener('input', handleSearch);
+    searchInput.addEventListener('compositionend', handleSearch); // Support for mobile Korean input
 
     // Initialize Auth state
     updateAuthState();
