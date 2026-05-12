@@ -54,4 +54,4 @@
 | 운영 지원 | hansei | axgurtls |
 
 ---
-*개발 및 기술 지원: Kim Young-Sam*
+*개발 및 기술 지원: 미래전략 TFT / AX혁신분과*
