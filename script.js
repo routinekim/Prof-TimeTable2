@@ -232,6 +232,79 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize Auth state
     updateAuthState();
+
+    // GitHub Sync Logic
+    const syncToGithubBtn = document.getElementById('syncToGithubBtn');
+    const githubTokenInput = document.getElementById('githubToken');
+
+    // Load saved token if exists
+    const savedToken = localStorage.getItem('githubToken');
+    if (savedToken) githubTokenInput.value = savedToken;
+
+    syncToGithubBtn.addEventListener('click', async () => {
+        const token = githubTokenInput.value.trim();
+        if (!token) {
+            alert('GitHub Personal Access Token을 입력해주세요.');
+            return;
+        }
+
+        // Save token for convenience
+        localStorage.setItem('githubToken', token);
+
+        if (!confirm('현재 업로드된 데이터를 라이브 사이트에 반영하시겠습니까?\n반영 후 약 1분 뒤에 모든 기기에 적용됩니다.')) return;
+
+        syncToGithubBtn.disabled = true;
+        syncToGithubBtn.textContent = '⏳ 동기화 중...';
+
+        const OWNER = 'routinekim';
+        const REPO = 'Prof-TimeTable2';
+        const FILE_PATH = 'data.js';
+
+        try {
+            // 1. Get the current file's SHA (needed for updating)
+            const getUrl = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
+            const getRes = await fetch(getUrl, {
+                headers: { 'Authorization': `token ${token}` }
+            });
+
+            if (!getRes.ok) throw new Error('파일 정보를 가져오지 못했습니다. 토큰이나 권한을 확인하세요.');
+            const fileData = await getRes.json();
+            const sha = fileData.sha;
+
+            // 2. Prepare the new content
+            const content = `const timetableData = ${JSON.stringify(currentTimetableData, null, 2)};`;
+            
+            // Handle Korean characters for base64 encoding
+            const base64Content = btoa(unescape(encodeURIComponent(content)));
+
+            // 3. Update the file
+            const putRes = await fetch(getUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Update timetable data from web admin',
+                    content: base64Content,
+                    sha: sha
+                })
+            });
+
+            if (putRes.ok) {
+                alert('🚀 성공! 깃허브에 데이터가 반영되었습니다.\n잠시 후(약 1분) 사이트가 자동으로 재배포됩니다.');
+            } else {
+                const error = await putRes.json();
+                throw new Error(error.message || '업데이트에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('오류 발생: ' + error.message);
+        } finally {
+            syncToGithubBtn.disabled = false;
+            syncToGithubBtn.textContent = '🚀 깃허브에 반영하여 배포하기';
+        }
+    });
     
     // Committee Dropdown logic
     const committeeSelect = document.getElementById('committeeSelect');
