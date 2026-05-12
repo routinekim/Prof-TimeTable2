@@ -14,13 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
 
     // Use a flexible variable for data (const in data.js cannot be reassigned)
-    let currentTimetableData = window.timetableData;
+    let currentTimetableData = window.timetableData || [];
 
     // Load persistent data if exists
     const savedData = localStorage.getItem('customTimetableData');
     if (savedData) {
         try {
-            currentTimetableData = JSON.parse(savedData);
+            const parsed = JSON.parse(savedData);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                currentTimetableData = parsed;
+                console.log("Using locally saved data");
+            }
         } catch(e) {
             console.error("Saved data parse error", e);
         }
@@ -303,6 +307,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             syncToGithubBtn.disabled = false;
             syncToGithubBtn.textContent = '🚀 깃허브에 반영하여 배포하기';
+        }
+    });
+
+    // Reset Local Data Logic
+    const resetLocalDataBtn = document.getElementById('resetLocalDataBtn');
+    resetLocalDataBtn.addEventListener('click', () => {
+        if (confirm('스마트폰(또는 현재 기기)에 저장된 임시 데이터를 삭제하고,\n서버(깃허브)에 있는 최신 데이터를 다시 불러오시겠습니까?')) {
+            localStorage.removeItem('customTimetableData');
+            location.reload(); // Refresh to load data.js afresh
         }
     });
     
