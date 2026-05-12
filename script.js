@@ -123,7 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        if (usernameInput.value === 'admin' && passwordInput.value === '1234') {
+        if ((usernameInput.value === 'admin' && passwordInput.value === '1234') || 
+            (usernameInput.value === 'hansei' && passwordInput.value === 'axgurtls')) {
             isLoggedIn = true;
             localStorage.setItem('isLoggedIn', 'true');
             updateAuthState();
