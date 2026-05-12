@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('addCommitteeBtn');
     const excelUpload = document.getElementById('excelUpload');
     const syncStatus = document.getElementById('syncStatus');
+    const forcePushBtn = document.getElementById('forcePushCommitteesBtn');
 
     // --- Supabase Config ---
     const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
@@ -211,6 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('저장 오류: ' + error.message);
         }
     }
+
+    // Manual Force Push for existing local data
+    forcePushBtn.addEventListener('click', async () => {
+        if (confirm('현재 화면에 보이는 위원회 정보를 서버(클라우드)로 전송하시겠습니까? (서버 데이터가 현재 데이터로 덮어씌워집니다)')) {
+            await saveCommitteesToCloud();
+            alert('✅ 로컬 데이터가 성공적으로 서버에 저장되었습니다. 이제 다른 기기에서도 확인하실 수 있습니다!');
+        }
+    });
 
     loadAllData();
 });
