@@ -140,27 +140,92 @@ h1 {
 }
 
 .committee-select-wrapper {
-    max-width: 600px;
+    max-width: 300px;
     margin: 0 auto 15px;
+    position: relative;
+    z-index: 1000;
 }
 
-#committeeSelect {
+.custom-select {
+    position: relative;
     width: 100%;
+    font-family: inherit;
+}
+
+.select-trigger {
     padding: 12px 20px;
     border: 1.5px solid var(--border-color);
     border-radius: 12px;
     font-size: 1rem;
-    font-family: inherit;
-    outline: none;
+    background-color: #fff;
     cursor: pointer;
-    background-color: #f8fafc;
     transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-#committeeSelect:focus {
+.select-trigger::after {
+    content: '▼';
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.custom-select.open .select-trigger::after {
+    transform: rotate(180deg);
+}
+
+.custom-select.open .select-trigger {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
+
+.select-options {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    z-index: 1001;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.custom-select.open .select-options {
+    display: block;
+}
+
+.select-option {
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+    text-align: left;
+}
+
+.select-option:hover {
+    background-color: #f1f5f9;
+}
+
+.select-option.active {
+    background-color: #eff6ff;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.select-option:first-child { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+.select-option:last-child { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
 
 #nameSearch {
     width: 100%;

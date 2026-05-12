@@ -35,9 +35,12 @@
             </div>
             <h1>한세대학교 2026-1 전임교원 시간표</h1>
             <div class="committee-select-wrapper">
-                <select id="committeeSelect">
-                    <option value="">-- 위원회 선택 (전체보기) --</option>
-                </select>
+                <div class="custom-select" id="committeeSelectContainer">
+                    <div class="select-trigger" id="selectTrigger">-- 위원회 선택 (전체보기) --</div>
+                    <div class="select-options" id="committeeOptions">
+                        <!-- 옵션들이 여기에 생성됩니다 -->
+                    </div>
+                </div>
             </div>
             <div class="search-wrapper">
                 <input type="text" id="nameSearch" placeholder="교수님 성함을 입력하세요" autocomplete="off">

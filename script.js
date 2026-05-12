@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const adminControls = document.getElementById('adminControls');
-    const committeeSelect = document.getElementById('committeeSelect');
+    const committeeSelectContainer = document.getElementById('committeeSelectContainer');
+    const selectTrigger = document.getElementById('selectTrigger');
+    const committeeOptions = document.getElementById('committeeOptions');
 
     // --- Supabase Config ---
     const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
@@ -61,14 +63,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCommittees() {
         committees.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-        committeeSelect.innerHTML = '<option value="">-- 위원회 선택 (전체보기) --</option>';
+        committeeOptions.innerHTML = '';
+
+        // Add "All" option
+        const allOption = document.createElement('div');
+        allOption.className = 'select-option active';
+        allOption.textContent = '-- 위원회 선택 (전체보기) --';
+        allOption.onclick = () => selectCommittee('', '-- 위원회 선택 (전체보기) --', allOption);
+        committeeOptions.appendChild(allOption);
+
         committees.forEach(c => {
-            const option = document.createElement('option');
-            option.value = c.members;
+            const option = document.createElement('div');
+            option.className = 'select-option';
             option.textContent = c.name;
-            committeeSelect.appendChild(option);
+            option.onclick = () => selectCommittee(c.members, c.name, option);
+            committeeOptions.appendChild(option);
         });
     }
+
+    function selectCommittee(members, name, element) {
+        // Update UI
+        document.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('active'));
+        element.classList.add('active');
+        selectTrigger.textContent = name;
+        committeeSelectContainer.classList.remove('open');
+
+        // Trigger search
+        const searchString = members.replace(/[/,]/g, ' ');
+        searchInput.value = searchString;
+        renderTimetable(searchString);
+    }
+
+    // Toggle dropdown
+    selectTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        committeeSelectContainer.classList.toggle('open');
+    });
+
+    // Close on outside click
+    document.addEventListener('click', () => {
+        committeeSelectContainer.classList.remove('open');
+    });
 
     function updateAuthState() {
         if (isLoggedIn) {
@@ -175,12 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSearch(e) { if (isLoggedIn) renderTimetable(e.target.value); }
     searchInput.addEventListener('input', handleSearch);
     searchInput.addEventListener('compositionend', handleSearch);
-
-    committeeSelect.addEventListener('change', (e) => {
-        const searchString = e.target.value.replace(/[/,]/g, ' ');
-        searchInput.value = searchString;
-        renderTimetable(searchString);
-    });
 
     updateAuthState();
     loadInitialData();
