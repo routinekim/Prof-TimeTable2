@@ -24,7 +24,10 @@
                     <div class="speech-bubble">안녕하세요.<br>저는 '한비(韓飛)'예요.<br>교수님들 시간표를<br>알려드릴께요.</div>
                     <img src="hanbi.gif" alt="한비 로고" class="logo">
                 </div>
-                <div class="qr-container">
+                <div class="qr-container" style="display: flex; flex-direction: column; align-items: center;">
+                    <a href="committee.html" id="adminControls" style="display: none; font-size: 0.65rem; color: #94a3b8; text-decoration: none; margin-bottom: 5px; font-weight: 500;">
+                        ⚙️ Setting
+                    </a>
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://prof-time-table.vercel.app/"
                         alt="QR 코드" class="qr-code">
                     <span>Scan for Live URL</span>
@@ -41,12 +44,6 @@
                 <div class="search-icon">🔍</div>
             </div>
             <p class="search-info">※ 한 칸 띄고 이름을 계속 입력하면,<br>여러 교수님이 검색됩니다.</p>
-            <div id="adminControls" style="display: none; margin-top: 15px;">
-                <a href="committee.html" class="upload-label"
-                    style="background: #3b82f6; text-decoration: none; margin-left: 0px; width: 100%; display: block; text-align: center;">
-                    ⚙️ 관리자 설정 (시간표 및 위원회)
-                </a>
-            </div>
             <button id="logoutBtn" class="logout-btn" style="display: none;">로그아웃</button>
         </header>
 
