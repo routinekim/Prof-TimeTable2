@@ -12,6 +12,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectTrigger = document.getElementById('selectTrigger');
     const committeeOptions = document.getElementById('committeeOptions');
 
+    // --- Security Config ---
+    const AUTH_CONFIG = {
+        'admin': '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // 1234
+        'hansei': 'df4d0c661c72e8ff36353496b02593298c6a4d15b319b66037e8adf3d92f2219' // axgurtls
+    };
+
+    async function hashPassword(password) {
+        const msgBuffer = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     // --- Supabase Config ---
     const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP'; 
@@ -49,19 +62,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (cData && cData.content) {
                     committees = cData.content;
-                    localStorage.setItem('committees', JSON.stringify(committees));
+                    if (isLoggedIn) {
+                        localStorage.setItem('committees', JSON.stringify(committees));
+                    }
                     renderCommittees();
                 }
             } catch (e) {
-                console.log("Using local fallback...");
-                committees = JSON.parse(localStorage.getItem('committees') || '[]');
-                renderCommittees();
+                console.log("Data load failed or unauthorized");
+                if (isLoggedIn) {
+                    committees = JSON.parse(localStorage.getItem('committees') || '[]');
+                    renderCommittees();
+                }
             }
         }
         renderTimetable();
     }
 
     function renderCommittees() {
+        if (!isLoggedIn) return;
         committees.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
         committeeOptions.innerHTML = '';
 
@@ -82,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function selectCommittee(members, name, element) {
+        if (!isLoggedIn) return;
         // Update UI
         document.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('active'));
         element.classList.add('active');
@@ -89,13 +108,14 @@ document.addEventListener('DOMContentLoaded', () => {
         committeeSelectContainer.classList.remove('open');
 
         // Trigger search
-        const searchString = members.replace(/[/,]/g, ' ');
+        const searchString = (members || '').replace(/[/,]/g, ' ');
         searchInput.value = searchString;
         renderTimetable(searchString);
     }
 
     // Toggle dropdown
     selectTrigger.addEventListener('click', (e) => {
+        if (!isLoggedIn) return;
         e.stopPropagation();
         committeeSelectContainer.classList.toggle('open');
     });
@@ -118,16 +138,22 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.disabled = true;
             searchInput.value = ''; 
             renderTimetable(''); 
+            committeeOptions.innerHTML = '';
+            selectTrigger.textContent = '-- 위원회 선택 (전체보기) --';
         }
     }
 
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if ((usernameInput.value === 'admin' && passwordInput.value === '1234') || 
-            (usernameInput.value === 'hansei' && passwordInput.value === 'axgurtls')) {
+        const user = usernameInput.value;
+        const pass = passwordInput.value;
+        const hashedPass = await hashPassword(pass);
+
+        if (AUTH_CONFIG[user] && AUTH_CONFIG[user] === hashedPass) {
             isLoggedIn = true;
             localStorage.setItem('isLoggedIn', 'true');
             updateAuthState();
+            loadInitialData(); // Reload data after login
             usernameInput.value = '';
             passwordInput.value = '';
         } else {
@@ -138,6 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
         isLoggedIn = false;
         localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('committees');
+        localStorage.removeItem('customTimetableData');
         updateAuthState();
     });
 

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let committees = JSON.parse(localStorage.getItem('committees') || '[]');
 
     async function loadAllData() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return;
         if (!supabase) {
             render();
             return;
@@ -61,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function saveCommitteesToCloud() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return;
         if (!supabase) return;
         
         localStorage.setItem('committees', JSON.stringify(committees));
@@ -191,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function syncTimetableToCloud(data) {
+        if (localStorage.getItem('isLoggedIn') !== 'true') return;
         if (!supabase) return;
         syncStatus.textContent = '상태: 시간표 데이터 업데이트 중... ⏳';
 
