@@ -10,16 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP'; 
     
-    let supabase = null;
-    if (SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT_URL')) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Load data from sessionStorage initially
+    let committees = JSON.parse(sessionStorage.getItem('committees') || '[]');
+
+    async function checkAuthAndLoad() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            window.location.href = 'index.html'; // Redirect to main if not logged in
+            return;
+        }
+        loadAllData();
     }
 
-    // Load data from localStorage initially
-    let committees = JSON.parse(localStorage.getItem('committees') || '[]');
-
     async function loadAllData() {
-        if (localStorage.getItem('isLoggedIn') !== 'true') return;
         if (!supabase) {
             render();
             return;
@@ -37,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (cData && cData.content) {
                 committees = cData.content;
-                localStorage.setItem('committees', JSON.stringify(committees));
+                sessionStorage.setItem('committees', JSON.stringify(committees));
                 console.log("Committees loaded from cloud");
             }
 
@@ -49,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .single();
             
             if (tData && tData.content) {
-                localStorage.setItem('customTimetableData', JSON.stringify(tData.content));
+                sessionStorage.setItem('customTimetableData', JSON.stringify(tData.content));
             }
 
             syncStatus.textContent = '상태: 모든 데이터 동기화 완료 ✅';
@@ -62,10 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function saveCommitteesToCloud() {
-        if (localStorage.getItem('isLoggedIn') !== 'true') return;
-        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !supabase) return;
         
-        localStorage.setItem('committees', JSON.stringify(committees));
+        sessionStorage.setItem('committees', JSON.stringify(committees));
         syncStatus.textContent = '상태: 위원회 데이터 저장 중... ⏳';
 
         try {
@@ -193,8 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function syncTimetableToCloud(data) {
-        if (localStorage.getItem('isLoggedIn') !== 'true') return;
-        if (!supabase) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || !supabase) return;
         syncStatus.textContent = '상태: 시간표 데이터 업데이트 중... ⏳';
 
         try {
@@ -224,5 +229,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    loadAllData();
+    checkAuthAndLoad();
 });

@@ -12,64 +12,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectTrigger = document.getElementById('selectTrigger');
     const committeeOptions = document.getElementById('committeeOptions');
 
-    // --- Security Config ---
-    const AUTH_CONFIG = {
-        'admin': '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // 1234
-        'hansei': 'df4d0c661c72e8ff36353496b02593298c6a4d15b319b66037e8adf3d92f2219' // axgurtls
-    };
-
-    async function hashPassword(password) {
-        const msgBuffer = new TextEncoder().encode(password);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    // --- Supabase Config (SDK 없이 fetch() 로 직접 REST API 호출) ---
+    // --- Supabase Config ---
     const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Auth state management
-    let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    let currentSession = null;
     let currentTimetableData = window.timetableData || [];
     let committees = [];
 
-    // Supabase REST API helper (SDK 없이 fetch 사용)
-    async function supabaseFetch(table, filter) {
-        const url = `${SUPABASE_URL}/rest/v1/${table}?${filter}&select=content`;
-        const res = await fetch(url, {
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        if (!res.ok) throw new Error(`Supabase fetch error: ${res.status}`);
-        const data = await res.json();
-        return data.length > 0 ? data[0] : null;
+    async function checkAuth() {
+        const { data: { session } } = await supabase.auth.getSession();
+        currentSession = session;
+        updateAuthState();
+        if (currentSession) {
+            loadInitialData();
+        }
     }
 
+    // Supabase helper using SDK
     async function loadInitialData() {
         try {
             // 1. Load Timetable
-            const tData = await supabaseFetch('timetable_data', 'id=eq.latest');
+            const { data: tData, error: tError } = await supabase
+                .from('timetable_data')
+                .select('content')
+                .eq('id', 'latest')
+                .single();
+            
+            if (tError) throw tError;
             if (tData && tData.content) {
                 currentTimetableData = tData.content;
             }
 
             // 2. Load Committees
-            const cData = await supabaseFetch('timetable_data', 'id=eq.committees');
+            const { data: cData, error: cError } = await supabase
+                .from('timetable_data')
+                .select('content')
+                .eq('id', 'committees')
+                .single();
+            
+            if (cError) throw cError;
             if (cData && cData.content) {
                 committees = cData.content;
-                if (isLoggedIn) {
-                    localStorage.setItem('committees', JSON.stringify(committees));
-                }
+                sessionStorage.setItem('committees', JSON.stringify(committees));
                 renderCommittees();
             }
         } catch (e) {
-            console.warn('Supabase 데이터 로드 실패, 로컬 캐시 사용:', e.message);
-            if (isLoggedIn) {
-                committees = JSON.parse(localStorage.getItem('committees') || '[]');
+            console.warn('Supabase 데이터 로드 실패, 세션 캐시 확인:', e.message);
+            if (currentSession) {
+                committees = JSON.parse(sessionStorage.getItem('committees') || '[]');
                 renderCommittees();
             }
         }
@@ -77,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCommittees() {
-        if (!isLoggedIn) return;
+        if (!currentSession) return;
         committees.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
         committeeOptions.innerHTML = '';
 
@@ -98,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function selectCommittee(members, name, element) {
-        if (!isLoggedIn) return;
+        if (!currentSession) return;
         // Update UI
         document.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('active'));
         element.classList.add('active');
@@ -113,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Toggle dropdown
     selectTrigger.addEventListener('click', (e) => {
-        if (!isLoggedIn) return;
+        if (!currentSession) return;
         e.stopPropagation();
         committeeSelectContainer.classList.toggle('open');
     });
@@ -124,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updateAuthState() {
-        if (isLoggedIn) {
+        if (currentSession) {
             loginOverlay.classList.add('hidden');
             logoutBtn.style.display = 'block';
             adminControls.style.display = 'block';
@@ -145,25 +138,31 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const user = usernameInput.value;
         const pass = passwordInput.value;
-        const hashedPass = await hashPassword(pass);
+        
+        // Use email format for Supabase Auth as per plan
+        const email = user.includes('@') ? user : `${user}@hansei.ac.kr`;
 
-        if (AUTH_CONFIG[user] && AUTH_CONFIG[user] === hashedPass) {
-            isLoggedIn = true;
-            localStorage.setItem('isLoggedIn', 'true');
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: pass
+        });
+
+        if (error) {
+            loginError.textContent = '아이디 또는 비밀번호 오류';
+            console.error('Auth error:', error.message);
+        } else {
+            currentSession = data.session;
             updateAuthState();
-            loadInitialData(); // Reload data after login
+            loadInitialData();
             usernameInput.value = '';
             passwordInput.value = '';
-        } else {
-            loginError.textContent = '아이디 또는 비밀번호 오류';
         }
     });
 
-    logoutBtn.addEventListener('click', () => {
-        isLoggedIn = false;
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('committees');
-        localStorage.removeItem('customTimetableData');
+    logoutBtn.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        currentSession = null;
+        sessionStorage.clear();
         updateAuthState();
     });
 
@@ -210,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             days.forEach(day => {
                 const td = document.createElement('td');
                 const names = row.days[day] || [];
-                if (isLoggedIn && (queries.length > 0 || forceShow)) {
+                if (currentSession && (queries.length > 0 || forceShow)) {
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'cell-content';
                     names.forEach(name => {
@@ -234,10 +233,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function handleSearch(e) { if (isLoggedIn) renderTimetable(e.target.value); }
+    function handleSearch(e) { if (currentSession) renderTimetable(e.target.value); }
     searchInput.addEventListener('input', handleSearch);
     searchInput.addEventListener('compositionend', handleSearch);
 
-    updateAuthState();
-    loadInitialData();
+    checkAuth(); // Check auth on startup
 });
