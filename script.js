@@ -25,54 +25,52 @@ document.addEventListener('DOMContentLoaded', () => {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // --- Supabase Config ---
-    const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co'; 
-    const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP'; 
-    
-    let supabase = null;
-    if (SUPABASE_URL && !SUPABASE_URL.includes('YOUR_PROJECT_URL')) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
+    // --- Supabase Config (SDK 없이 fetch() 로 직접 REST API 호출) ---
+    const SUPABASE_URL = 'https://mwjuwzzipnwklxskocpb.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_LLOkv1Fj-M-RV0IPq_9idQ_pD3OwgKP';
 
     // Auth state management
     let isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     let currentTimetableData = window.timetableData || [];
     let committees = [];
 
-    async function loadInitialData() {
-        if (supabase) {
-            try {
-                // 1. Load Timetable
-                const { data: tData } = await supabase
-                    .from('timetable_data')
-                    .select('content')
-                    .eq('id', 'latest')
-                    .single();
-                
-                if (tData && tData.content) {
-                    currentTimetableData = tData.content;
-                }
+    // Supabase REST API helper (SDK 없이 fetch 사용)
+    async function supabaseFetch(table, filter) {
+        const url = `${SUPABASE_URL}/rest/v1/${table}?${filter}&select=content`;
+        const res = await fetch(url, {
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!res.ok) throw new Error(`Supabase fetch error: ${res.status}`);
+        const data = await res.json();
+        return data.length > 0 ? data[0] : null;
+    }
 
-                // 2. Load Committees
-                const { data: cData } = await supabase
-                    .from('timetable_data')
-                    .select('content')
-                    .eq('id', 'committees')
-                    .single();
-                
-                if (cData && cData.content) {
-                    committees = cData.content;
-                    if (isLoggedIn) {
-                        localStorage.setItem('committees', JSON.stringify(committees));
-                    }
-                    renderCommittees();
-                }
-            } catch (e) {
-                console.log("Data load failed or unauthorized");
+    async function loadInitialData() {
+        try {
+            // 1. Load Timetable
+            const tData = await supabaseFetch('timetable_data', 'id=eq.latest');
+            if (tData && tData.content) {
+                currentTimetableData = tData.content;
+            }
+
+            // 2. Load Committees
+            const cData = await supabaseFetch('timetable_data', 'id=eq.committees');
+            if (cData && cData.content) {
+                committees = cData.content;
                 if (isLoggedIn) {
-                    committees = JSON.parse(localStorage.getItem('committees') || '[]');
-                    renderCommittees();
+                    localStorage.setItem('committees', JSON.stringify(committees));
                 }
+                renderCommittees();
+            }
+        } catch (e) {
+            console.warn('Supabase 데이터 로드 실패, 로컬 캐시 사용:', e.message);
+            if (isLoggedIn) {
+                committees = JSON.parse(localStorage.getItem('committees') || '[]');
+                renderCommittees();
             }
         }
         renderTimetable();
