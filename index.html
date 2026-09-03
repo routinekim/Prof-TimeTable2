@@ -72,6 +72,10 @@
             </div>
         </main>
 
+        <p id="usageNotice" class="usage-notice" style="display: none;">
+            본 시스템에서 제공하는 구성원 수업시간표 정보는 위원회 등 교내 회의 일정 조정을 위한 참고 목적으로만 제공됩니다. 제공되는 정보는 수업이 배정된 시간대에 한정되며, 강의실 위치 및 수업 내용 등 그 외의 정보는 포함하지 않습니다.
+        </p>
+
         <footer>
             <button id="logoutBtn" class="logout-btn" style="display: none;">로그아웃</button>
             <p>Developed by 미래전략 TFT / AX혁신분과</p>
@@ -95,8 +99,15 @@
                     <label for="password">비밀번호</label>
                     <input type="password" id="password" placeholder="비밀번호를 입력하세요" required>
                 </div>
+                <div class="agreement-group">
+                    <label class="agreement-label">
+                        <input type="checkbox" id="agreeCheckbox">
+                        <span>본 시스템은 위원회 일정 조정을 위해 구성원의 수업시간표(수업 배정 시간대) 정보를 제공합니다.
+                            이용자 본인은 조회한 정보를 일정 조정 목적으로만 사용하며, 목적 외 이용·제3자 제공·외부 유출을 하지 않을 것을 확인합니다.</span>
+                    </label>
+                </div>
                 <div id="loginError" class="login-error"></div>
-                <button type="submit" class="login-submit">로그인</button>
+                <button type="submit" class="login-submit" id="loginSubmitBtn" disabled>로그인</button>
             </form>
         </div>
     </div>

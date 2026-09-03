@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logoutBtn');
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
+    const agreeCheckbox = document.getElementById('agreeCheckbox');
+    const loginSubmitBtn = document.getElementById('loginSubmitBtn');
     const adminControls = document.getElementById('adminControls');
+    const usageNotice = document.getElementById('usageNotice');
     const committeeSelectContainer = document.getElementById('committeeSelectContainer');
     const selectTrigger = document.getElementById('selectTrigger');
     const committeeOptions = document.getElementById('committeeOptions');
@@ -121,24 +124,36 @@ document.addEventListener('DOMContentLoaded', () => {
             loginOverlay.classList.add('hidden');
             logoutBtn.style.display = 'block';
             adminControls.style.display = 'block';
+            usageNotice.style.display = 'block';
             searchInput.disabled = false;
         } else {
             loginOverlay.classList.remove('hidden');
             logoutBtn.style.display = 'none';
             adminControls.style.display = 'none';
+            usageNotice.style.display = 'none';
             searchInput.disabled = true;
             searchInput.value = ''; 
             renderTimetable(''); 
             committeeOptions.innerHTML = '';
             selectTrigger.textContent = '-- 위원회 선택 (전체보기) --';
+            agreeCheckbox.checked = false;
+            loginSubmitBtn.disabled = true;
         }
     }
 
+    agreeCheckbox.addEventListener('change', () => {
+        loginSubmitBtn.disabled = !agreeCheckbox.checked;
+    });
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!agreeCheckbox.checked) {
+            loginError.textContent = '개인정보 이용 동의에 체크해야 로그인할 수 있습니다.';
+            return;
+        }
         const user = usernameInput.value;
         const pass = passwordInput.value;
-        
+
         // Use email format for Supabase Auth as per plan
         const email = user.includes('@') ? user : `${user}@hansei.ac.kr`;
 
